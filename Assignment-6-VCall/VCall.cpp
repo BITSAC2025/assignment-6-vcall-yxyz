@@ -172,28 +172,23 @@ void Andersen::updateCallGraph(SVF::CallGraph *cg)
     //  调用图的实现在SVF库中提供
     const auto &allIndirectCalls = consg->getIndirectCallsites();
 
-    for (const auto &callsiteInfo : allIndirectCalls)
+    for (const auto &callInfo : allIndirectCalls)
     {
-        SVF::CallBlockNode *callsite = callsiteInfo.first;
-        unsigned funcPtrId = callsiteInfo.second;
+        auto callsite = callInfo.first;
+        auto funcPtrId = callInfo.second;
 
-        // 检查函数指针的点集是否存在
-        auto it = pts.find(funcPtrId);
-        if (it == pts.end())
-            continue;
+        auto caller = callsite->getCaller();
 
-        const SVF::Function *caller = callsite->getCaller();
-        const auto &funcPtrPointsTo = it->second;
+        const auto &funcPtrPointsTo = pts[funcPtrId];
 
-        // 遍历函数指针可能指向的所有对象
-        for (unsigned potentialFuncId : funcPtrPointsTo)
+        for (auto potentialFuncId : funcPtrPointsTo)
         {
-            // 跳过非函数对象
-            if (!consg->isFunction(potentialFuncId))
-                continue;
-            
-            const SVF::Function *callee = consg->getFunction(potentialFuncId);
-            cg->addIndirectCallGraphEdge(callsite, caller, callee);
+            if (consg->isFunction(potentialFuncId))
+            {
+                auto callee = consg->getFunction(potentialFuncId);
+
+                cg->addIndirectCallGraphEdge(callsite, caller, callee);
+            }
         }
     }
 }
